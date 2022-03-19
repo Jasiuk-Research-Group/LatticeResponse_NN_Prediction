@@ -149,17 +149,16 @@ for REP in range( 1 ):
         return decoded
 
     N_eval = 200
+    def dice_coef(y_true, y_pred):
+        y_true_f = K.flatten(y_true)
+        y_pred_f = K.flatten(y_pred)
+        intersection = K.sum(y_true_f * y_pred_f)
+        return (2. * intersection ) / (K.sum(y_true_f) + K.sum(y_pred_f) )
     if retrain_img_encoder:
-        # new_repeat = 1000
-        # auto_size -= new_repeat * 3
+        new_repeat = 0
+        auto_size -= new_repeat * 3
         # Train encoder
         print('\n\nTraining image autoencoder with ' + str(auto_size) + ' images, latent dimension = ' + str(latent_dim) )
-
-        def dice_coef(y_true, y_pred):
-            y_true_f = K.flatten(y_true)
-            y_pred_f = K.flatten(y_pred)
-            intersection = K.sum(y_true_f * y_pred_f)
-            return (2. * intersection ) / (K.sum(y_true_f) + K.sum(y_pred_f) )
 
         # Build training set
         img_auto_train = np.zeros([auto_size+new_repeat * 3,128,128])
@@ -216,7 +215,7 @@ for REP in range( 1 ):
 
     else:
         # Just read the saved encoder
-        autoencoder = tf.keras.models.load_model( 'Repetition'+str(REP)+"/ImgEncoder" )
+        autoencoder = tf.keras.models.load_model( 'Repetition'+str(REP)+"/ImgEncoder" , custom_objects={'dice_coef': dice_coef} )
         print('Using saved image encoder!')
 
     # Sanity check
@@ -229,19 +228,19 @@ for REP in range( 1 ):
         curr_key2 = test2_img_key[ii]
         img_auto_test2[ii,:,:] = img_dict[ curr_key2 ]
 
-    # Build new geom sets
-    img_auto_test_new = np.zeros([3,128,128])
-    ii = 0
-    for k , v in img_dict_new.items():
-        img_auto_test_new[ii,:,:] = v
-        ii += 1
+    # # Build new geom sets
+    # img_auto_test_new = np.zeros([3,128,128])
+    # ii = 0
+    # for k , v in img_dict_new.items():
+    #     img_auto_test_new[ii,:,:] = v
+    #     ii += 1
 
     print('\nEvaluate image autoencoder:')
     model_evaluation = autoencoder.evaluate(x=img_auto_test , y=img_auto_test, batch_size= 1 )
     print('On a new strucutre:')
     model_evaluation = autoencoder.evaluate(x=img_auto_test2 , y=img_auto_test2, batch_size= 1 )
-    print('On a three new test strucutres:')
-    model_evaluation = autoencoder.evaluate(x=img_auto_test_new , y=img_auto_test_new, batch_size= 1 )
+    # print('On a three new test strucutres:')
+    # model_evaluation = autoencoder.evaluate(x=img_auto_test_new , y=img_auto_test_new, batch_size= 1 )
 
     # Plot images
     encoded_imgs = autoencoder.encoder(img_auto_test2).numpy()
